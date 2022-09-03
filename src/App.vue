@@ -166,9 +166,9 @@ export default {
       setInterval(async () => {
         const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD&api_key=48131930ee5d463169bcae9e7d14fdba93745c2b94b2adec2879c3e73f4a1b5a`);
         const data = await f.json()
-        this.tickers.find(el => el.name === currentTicker.name).price =
-            data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
-        if(this.sel?.name === currentTicker.name){
+        const currentTickerInsideVueProxy = this.tickers.find(el => el.name === currentTicker.name)
+        currentTickerInsideVueProxy.price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+        if(this.sel?.name === currentTickerInsideVueProxy.name){
           this.graph.push(data.USD)
         }
       }, 7000)
