@@ -18,6 +18,17 @@
                   placeholder="Например DOGE"
               />
             </div>
+            <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
+            <span
+                v-for="hint of hints"
+                :key="hint"
+                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
+              {{ hint }}
+            </span>
+            </div>
+            <div
+                v-if="flag"
+                class="text-sm text-red-600">Такой тикер уже добавлен</div>
           </div>
         </div>
         <button
@@ -136,19 +147,37 @@ export default {
   name: 'App',
   data() {
     return {
-      ticker: 'default',
+      ticker: '',
       tickers: [],
       sel: null,
       graph: [],
-      stack: {},
+      flag: false,
+      coinList: [],
+      hints: []
     }
+  },
+  async created() {
+    async function collectCoinList(){
+      return await fetch('https://min-api.cryptocompare.com/data/all/coinlist?summary=true')
+          .then(response => response.json())
+          .then(response => response['Data'])
+    }
+    this.coinList = await collectCoinList()
   },
   methods: {
     add(){
-      const currentTicker = { name: this.ticker, price: '...'}
+      const currentTicker = { name: this.ticker.toUpperCase(), price: '...'}
+      if(!Object.keys(this.coinList).includes(currentTicker.name)) return false         //upgrade sort
+      if(this.tickers.find(el => el.name === currentTicker.name)) {
+        this.ticker = ''
+        this.flag = !this.flag
+        setTimeout(() => this.flag = !this.flag, 1000)
+        return
+      }
       this.tickers.push(currentTicker)
       this.ticker = ''
-      setInterval(async () => {
+      const intervalId = setInterval(async () => {
+        if(!this.tickers.includes(currentTicker)) clearInterval(intervalId)
         const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD&api_key=48131930ee5d463169bcae9e7d14fdba93745c2b94b2adec2879c3e73f4a1b5a`);
         const data = await f.json()
         const currentTickerInsideVueProxy = this.tickers.find(el => el.name === currentTicker.name)
@@ -158,6 +187,12 @@ export default {
         }
       }, 7000)
     },
+    // showHint(){
+    //   this.hints = Object.keys(this.coinList).filter(coinName => {
+    //     return this.coinList[coinName].startsWith(this.ticker.toUpperCase())
+    //   })
+    //   console.log(this.hints);
+    // },
     select(item){
       if(this.sel !== item && this.sel !== null) {
         this.graph = []
@@ -177,7 +212,7 @@ export default {
       const minValue = Math.min(...this.graph)
       return this.graph.map(
           price => 5 + (price - minValue) * 95 / (maxValue - minValue))
-    }
+    },
   }
 }
 </script>
