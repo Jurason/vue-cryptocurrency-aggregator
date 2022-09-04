@@ -11,6 +11,7 @@
               <input
                   v-model="ticker"
                   v-on:keydown.enter="add"
+                  v-on:input="inputWatcher"
                   type="text"
                   name="wallet"
                   id="wallet"
@@ -18,6 +19,20 @@
                   placeholder="Например DOGE"
               />
             </div>
+            <div class="flex bg-white shadow-md p-1 rounded-md shadow-md flex-wrap">
+            <template v-if="ticker.length > 0">
+              <span
+                v-for="hint of hints"
+                :key="hint"
+                @click="addFromHints(hint)"
+                class="inline-flex items-center px-2 m-1 rounded-md text-xs font-medium bg-gray-300 text-gray-800 cursor-pointer">
+              {{ hint }}
+            </span>
+            </template>
+            </div>
+            <div
+                v-if="flag"
+                class="text-sm text-red-600">Такой тикер уже добавлен</div>
           </div>
         </div>
         <button
@@ -136,27 +151,55 @@ export default {
   name: 'App',
   data() {
     return {
-      ticker: 'default',
+      ticker: '',
       tickers: [],
       sel: null,
       graph: [],
-      stack: {},
+      flag: false,
+      coinList: [],
+      hints: []
     }
+  },
+  async created() {
+    async function collectCoinList(){
+      return await fetch('https://min-api.cryptocompare.com/data/all/coinlist?summary=true')
+          .then(response => response.json())
+          .then(response => response['Data'])
+    }
+    this.coinList = await collectCoinList()
   },
   methods: {
     add(){
-      const currentTicker = { name: this.ticker, price: '...'}
+      const currentTicker = { name: this.ticker.toUpperCase(), price: '...'}
+      if(!Object.keys(this.coinList).includes(currentTicker.name)) return false         //upgrade sort
+      if(this.tickers.find(el => el.name === currentTicker.name)) {
+        this.flag = true
+        return
+      }
       this.tickers.push(currentTicker)
       this.ticker = ''
-      setInterval(async () => {
+      const intervalId = setInterval(async () => {
+        if(!this.tickers.includes(currentTicker)) clearInterval(intervalId)
         const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD&api_key=48131930ee5d463169bcae9e7d14fdba93745c2b94b2adec2879c3e73f4a1b5a`);
         const data = await f.json()
         const currentTickerInsideVueProxy = this.tickers.find(el => el.name === currentTicker.name)
-        currentTickerInsideVueProxy.price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
-        if(this.sel?.name === currentTickerInsideVueProxy.name){
-          this.graph.push(data.USD)
+        if(currentTickerInsideVueProxy) {
+          currentTickerInsideVueProxy.price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+          if (this.sel?.name === currentTickerInsideVueProxy.name) {
+            this.graph.push(data.USD)
+          }
         }
       }, 7000)
+    },
+    addFromHints(hint){
+      this.ticker = hint
+      this.add()
+    },
+    inputWatcher(){
+      this.flag = false
+      this.hints = Object.keys(this.coinList).filter(coinName => {
+        return coinName.startsWith(this.ticker.toUpperCase())
+      }).slice(0,4)
     },
     select(item){
       if(this.sel !== item && this.sel !== null) {
@@ -177,7 +220,7 @@ export default {
       const minValue = Math.min(...this.graph)
       return this.graph.map(
           price => 5 + (price - minValue) * 95 / (maxValue - minValue))
-    }
+    },
   }
 }
 </script>
