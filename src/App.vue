@@ -167,22 +167,22 @@ export default {
           .then(response => response['Data'])
     }
     this.coinList = await collectCoinList()
+
+    const tickersData = localStorage.getItem('cryptonomicon-list')
+    if(tickersData){
+      this.tickers = JSON.parse(tickersData)
+      this.tickers.forEach(ticker => {
+        this.subscribeToUpdates(ticker.name)
+      })
+    }
   },
   methods: {
-    add(){
-      const currentTicker = { name: this.ticker.toUpperCase(), price: '...'}
-      if(!Object.keys(this.coinList).includes(currentTicker.name)) return false         //upgrade sort
-      if(this.tickers.find(el => el.name === currentTicker.name)) {
-        this.flag = true
-        return
-      }
-      this.tickers.push(currentTicker)
-      this.ticker = ''
+    subscribeToUpdates(tickerName){
       const intervalId = setInterval(async () => {
-        if(!this.tickers.includes(currentTicker)) clearInterval(intervalId)
-        const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${currentTicker.name}&tsyms=USD&api_key=48131930ee5d463169bcae9e7d14fdba93745c2b94b2adec2879c3e73f4a1b5a`);
+        if(!this.tickers.includes(tickerName)) clearInterval(intervalId)
+        const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=48131930ee5d463169bcae9e7d14fdba93745c2b94b2adec2879c3e73f4a1b5a`);
         const data = await f.json()
-        const currentTickerInsideVueProxy = this.tickers.find(el => el.name === currentTicker.name)
+        const currentTickerInsideVueProxy = this.tickers.find(el => el.name === tickerName)
         if(currentTickerInsideVueProxy) {
           currentTickerInsideVueProxy.price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
           if (this.sel?.name === currentTickerInsideVueProxy.name) {
@@ -190,6 +190,25 @@ export default {
           }
         }
       }, 7000)
+    },
+    add(){
+      const currentTicker = {
+        name: this.ticker.toUpperCase(),
+        price: '...'
+      }
+
+      if(!Object.keys(this.coinList).includes(currentTicker.name)) return false         //upgrade sort
+      if(this.tickers.find(el => el.name === currentTicker.name)) {
+        this.flag = true
+        return
+      }
+
+      this.tickers.push(currentTicker)
+      this.ticker = ''
+
+      localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
+
+      this.subscribeToUpdates(currentTicker.name)
     },
     addFromHints(hint){
       this.ticker = hint
@@ -214,6 +233,8 @@ export default {
     remove(tickerToRemove) {
       this.tickers = this.tickers.filter(el => el !== tickerToRemove)
       if(tickerToRemove === this.sel) this.sel = null
+
+      localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
     },
     normalizeGraph(){
       const maxValue = Math.max(...this.graph)
