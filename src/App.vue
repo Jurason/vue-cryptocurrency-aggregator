@@ -77,11 +77,11 @@
       <hr class="w-full border-t border-gray-600 my-4" />
       <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
         <div
-            v-for="item of filterTickers()"
+            v-for="item of paginatedTickers"
             :key="item"
             v-on:click="select(item)"
             v-bind:class="{
-              'border-4': sel === item
+              'border-4': selectedTicker === item
             }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
         >
@@ -95,7 +95,7 @@
           </div>
           <div class="w-full border-t border-gray-200"></div>
           <button
-              v-on:click.stop="remove(item)"
+              v-on:click.stop="handleDelete(item)"
               class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
           >
             <svg
@@ -117,20 +117,20 @@
       <hr class="w-full border-t border-gray-600 my-4" />
       </template>
         <section
-            v-if="sel"
+            v-if="selectedTicker"
             class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-        {{sel.name}} - USD
+          {{ selectedTicker.name }} - USD
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
-              v-for="(bar, idx) of normalizeGraph()"
+              v-for="(bar, idx) of normalizedGraph"
               :key="idx"
               :style="{ height: `${bar}%`}"
               class="bg-purple-800 border w-10"></div>
         </div>
         <button
-            @click="sel = null"
+            @click="selectedTicker = null"
             type="button"
             class="absolute top-0 right-0"
         >
@@ -171,7 +171,7 @@ export default {
       filter: "",
 
       tickers: [],
-      sel: null,
+      selectedTicker: null,
       hints: [],
       coinList: [],
 
@@ -180,7 +180,6 @@ export default {
       page: 1,
 
       flag: false,
-      hasNextPage: true,
     }
   },
   async created() {
@@ -207,17 +206,41 @@ export default {
       })
     }
   },
+  computed: {
+    pageStateOptions(){
+      return {
+        filter: this.filter,
+        page: this.page
+      }
+    },
+    startIndex(){
+      return (this.page - 1) * 6;
+    },
+    endIndex(){
+      return this.page * 6;
+    },
+    filteredTickers(){
+      return this.tickers.filter(ticker =>
+          ticker.name.includes(this.filter.toUpperCase())
+      );
+    },
+    paginatedTickers(){
+      return this.filteredTickers.slice(this.startIndex, this.endIndex)
+    },
+    hasNextPage(){
+      return this.filteredTickers.length > this.endIndex
+    },
+    normalizedGraph(){
+      const maxValue = Math.max(...this.graph)
+      const minValue = Math.min(...this.graph)
+      if(maxValue === minValue) {
+        return this.graph.map(() => 50)
+      }
+      return this.graph.map(
+        price => 5 + (price - minValue) * 95 / (maxValue - minValue))
+    },
+  },
   methods: {
-    computed(){
-
-    },
-    filterTickers(){
-      const start = (this.page - 1) * 6
-      const end = this.page * 6
-      const filteredTickers = this.tickers.filter(ticker => ticker.name.includes(this.filter.toUpperCase()))
-      this.hasNextPage = filteredTickers.length > end
-      return filteredTickers.slice(start, end)
-    },
     subscribeToUpdates(tickerName){
       const intervalId = setInterval(async () => {
         if(!this.tickers.some(el => el.name ===tickerName)) clearInterval(intervalId)
@@ -226,7 +249,7 @@ export default {
         const currentTickerInsideVueProxy = this.tickers.find(el => el.name === tickerName)
         if(currentTickerInsideVueProxy) {
           currentTickerInsideVueProxy.price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
-          if (this.sel?.name === currentTickerInsideVueProxy.name) {
+          if (this.selectedTicker?.name === currentTickerInsideVueProxy.name) {
             this.graph.push(data.USD)
           }
         }
@@ -249,8 +272,6 @@ export default {
       this.tickers.push(currentTicker)
       this.ticker = ''
 
-      localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
-
       this.subscribeToUpdates(currentTicker.name)
     },
     addFromHints(hint){
@@ -264,47 +285,43 @@ export default {
       }).slice(0,4)
     },
     select(item){
-      if(this.sel !== item && this.sel !== null) {
-        this.graph = []
+      // if(this.selectedTicker !== item && this.selectedTicker !== null) {
+      //   this.graph = []
         // this.stack[this.sel.name] ? this.stack[this.sel.name].push(...this.graph) : this.stack[this.sel.name] = this.graph
         // console.log(this.graph);
         // this.graph = this.stack[item.name] ? this.stack[item.name] : []
         // console.log(this.graph);
-      }
-      this.sel = item;
+      // }
+      this.selectedTicker = item;
     },
-    remove(tickerToRemove) {
+    handleDelete(tickerToRemove) {
       this.tickers = this.tickers.filter(el => el !== tickerToRemove)
-      if(tickerToRemove === this.sel) this.sel = null
 
-      localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
+      if(tickerToRemove === this.selectedTicker) this.selectedTicker = null
     },
-    normalizeGraph(){
-      const maxValue = Math.max(...this.graph)
-      const minValue = Math.min(...this.graph)
-      return this.graph.map(
-          price => 5 + (price - minValue) * 95 / (maxValue - minValue))
-    },
-
   },
   watch: {
+    tickers(newValue, oldValue){
+      localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
+    },
+
+    selectedTicker(){
+      this.graph = []
+    },
+
+    paginatedTickers(){
+      if(this.paginatedTickers.length === 0 && this.page > 1) this.page -= 1
+    },
+
     filter() {
       this.page = 1
-
-      // const currentUrl = new URL(window.location)
-
-      window.history.pushState(
-          null,
-          document.title,
-          `${window.location.pathname}?filter=${this.filter}&page=${this.page}`)
     },
-    page(){
+    pageStateOptions(value){
       window.history.pushState(
           null,
           document.title,
-          `${window.location.pathname}?filter=${this.filter}&page=${this.page}`)
+          `${window.location.pathname}?filter=${value.filter}&page=${value.page}`)
     }
-
   }
 }
 </script>
