@@ -183,14 +183,15 @@ export default {
     }
   },
   async created() {
-    const windowData = Object.fromEntries(new URL(window.location).searchParams.entries())
-    if(windowData.filter){
-      this.filter = windowData.filter
-    }
-    if(windowData.page){
-      this.page = windowData.page
-    }
-
+    const windowData = Object.fromEntries(
+        new URL(window.location).searchParams.entries()
+    );
+    const VALID_KEYS = ['filter', 'page']
+    VALID_KEYS.forEach(key => {
+      if(windowData[key]){
+        this[key] = windowData[key]
+      }
+    });
     async function collectCoinList(){
       return await fetch('https://min-api.cryptocompare.com/data/all/coinlist?summary=true')
           .then(response => response.json())
@@ -269,7 +270,7 @@ export default {
         return
       }
 
-      this.tickers.push(currentTicker)
+      this.tickers = [...this.tickers, currentTicker]
       this.ticker = ''
 
       this.subscribeToUpdates(currentTicker.name)
@@ -301,7 +302,7 @@ export default {
     },
   },
   watch: {
-    tickers(newValue, oldValue){
+    tickers(){
       localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
     },
 
@@ -316,12 +317,13 @@ export default {
     filter() {
       this.page = 1
     },
+
     pageStateOptions(value){
       window.history.pushState(
           null,
           document.title,
           `${window.location.pathname}?filter=${value.filter}&page=${value.page}`)
-    }
+    },
   }
 }
 </script>
