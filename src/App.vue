@@ -31,7 +31,7 @@
             </template>
             </div>
             <div
-                v-if="flag"
+                v-if="tickerAlreadyAdded"
                 class="text-sm text-red-600">Already added</div>
           </div>
         </div>
@@ -90,7 +90,7 @@
               {{ item.name }} - USD
             </dt>
             <dd class="mt-1 text-3xl font-semibold text-gray-900">
-              {{ item.price }}
+              {{ formatPrice(item.price) }}
             </dd>
           </div>
           <div class="w-full border-t border-gray-200"></div>
@@ -163,6 +163,8 @@
 
 <script>
 
+import { subscribeToTicker, unsubscribeFromTicker } from "./api";
+
 export default {
   name: 'App',
   data() {
@@ -179,7 +181,7 @@ export default {
 
       page: 1,
 
-      flag: false,
+      tickerAlreadyAdded: false,
     }
   },
   async created() {
@@ -203,7 +205,9 @@ export default {
     if(tickersData){
       this.tickers = JSON.parse(tickersData)
       this.tickers.forEach(ticker => {
-        this.subscribeToUpdates(ticker.name)
+        subscribeToTicker(ticker.name, (newPrice) => {
+          this.updatePrice(ticker.name, newPrice)
+        })
       })
     }
   },
@@ -242,23 +246,29 @@ export default {
     },
   },
   methods: {
-    subscribeToUpdates(tickerName){
-      const intervalId = setInterval(async () => {
-        if(!this.tickers.some(el => el.name ===tickerName)) clearInterval(intervalId)
-        const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=48131930ee5d463169bcae9e7d14fdba93745c2b94b2adec2879c3e73f4a1b5a`);
-        const data = await f.json()
-        const currentTickerInsideVueProxy = this.tickers.find(el => el.name === tickerName)
-        if(currentTickerInsideVueProxy) {
-          currentTickerInsideVueProxy.price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
-          if (this.selectedTicker?.name === currentTickerInsideVueProxy.name) {
-            this.graph.push(data.USD)
-          }
-        }
-      }, 7000)
+    updatePrice(tickerName, price){
+      this.tickers.filter(ticker => ticker.name === tickerName).forEach(ticker => ticker.price = price)
     },
-    add(){
-      this.filter = ''
+    formatPrice(price){
+      if(price === '...') {
+        return price
+      }
+      return price > 1
+          ? price.toFixed(2)
+          : price.toPrecision(2)
+    },
 
+    // async updateTickers(){
+    //   if(!this.tickers.length){
+    //     return
+    //   }
+    //   const exchangeData = await loadTickers(this.tickers.map(ticker => ticker.name)) // apply ticker's name to API request
+    //   this.tickers.forEach(ticker => {                                               // update ticker's price
+    //     const price = exchangeData[ticker.name.toUpperCase()]
+    //     ticker.price = price ?? '-'
+    //   })
+    // },
+    add(){
       const currentTicker = {
         name: this.ticker.toUpperCase(),
         price: '...'
@@ -266,21 +276,23 @@ export default {
 
       if(!Object.keys(this.coinList).includes(currentTicker.name)) return false         //upgrade sort
       if(this.tickers.find(el => el.name === currentTicker.name)) {
-        this.flag = true
+        this.tickerAlreadyAdded = true
         return
       }
 
       this.tickers = [...this.tickers, currentTicker]
+      this.filter = ''
       this.ticker = ''
-
-      this.subscribeToUpdates(currentTicker.name)
+      subscribeToTicker(currentTicker.name, (newPrice) => {
+        this.updatePrice(currentTicker.name, newPrice)
+      })
     },
     addFromHints(hint){
       this.ticker = hint
       this.add()
     },
     inputWatcher(){
-      this.flag = false
+      this.tickerAlreadyAdded = false
       this.hints = Object.keys(this.coinList).filter(coinName => {
         return coinName.includes(this.ticker.toUpperCase())
       }).slice(0,4)
@@ -296,9 +308,14 @@ export default {
       this.selectedTicker = item;
     },
     handleDelete(tickerToRemove) {
+
       this.tickers = this.tickers.filter(el => el !== tickerToRemove)
 
       if(tickerToRemove === this.selectedTicker) this.selectedTicker = null
+
+      unsubscribeFromTicker(tickerToRemove.name)
+      unsubscribeFromTicker(tickerToRemove.name)
+
     },
   },
   watch: {
