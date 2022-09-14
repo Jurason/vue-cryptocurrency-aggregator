@@ -244,30 +244,30 @@ export default {
       return this.graph.map(
         price => 5 + (price - minValue) * 95 / (maxValue - minValue))
     },
+    selectedTickerPrice(){
+      return this.selectedTicker.price
+    }
   },
   methods: {
     updatePrice(tickerName, price){
-      this.tickers.filter(ticker => ticker.name === tickerName).forEach(ticker => ticker.price = price)
+      this.tickers
+          .filter(ticker => ticker.name === tickerName)
+          .forEach(ticker => {
+            if(ticker === this.selectedTicker) {
+              this.graph.push(price)
+            }
+            ticker.price = price
+          }) // this.tickers.filter(ticker => ticker.name === tickerName).price = price
     },
     formatPrice(price){
       if(price === '...') {
-        return price
+        return '...'
       }
       return price > 1
           ? price.toFixed(2)
           : price.toPrecision(2)
     },
 
-    // async updateTickers(){
-    //   if(!this.tickers.length){
-    //     return
-    //   }
-    //   const exchangeData = await loadTickers(this.tickers.map(ticker => ticker.name)) // apply ticker's name to API request
-    //   this.tickers.forEach(ticker => {                                               // update ticker's price
-    //     const price = exchangeData[ticker.name.toUpperCase()]
-    //     ticker.price = price ?? '-'
-    //   })
-    // },
     add(){
       const currentTicker = {
         name: this.ticker.toUpperCase(),
@@ -298,13 +298,14 @@ export default {
       }).slice(0,4)
     },
     select(item){
-      // if(this.selectedTicker !== item && this.selectedTicker !== null) {
-      //   this.graph = []
-        // this.stack[this.sel.name] ? this.stack[this.sel.name].push(...this.graph) : this.stack[this.sel.name] = this.graph
-        // console.log(this.graph);
-        // this.graph = this.stack[item.name] ? this.stack[item.name] : []
-        // console.log(this.graph);
-      // }
+      if(this.selectedTicker !== item && this.selectedTicker !== null) {
+        this.graph = []
+
+      //   this.stack[this.sel.name] ? this.stack[this.sel.name].push(...this.graph) : this.stack[this.sel.name] = this.graph
+      //   console.log(this.graph);
+      //   this.graph = this.stack[item.name] ? this.stack[item.name] : []
+      //   console.log(this.graph);
+      }
       this.selectedTicker = item;
     },
     handleDelete(tickerToRemove) {
@@ -314,8 +315,6 @@ export default {
       if(tickerToRemove === this.selectedTicker) this.selectedTicker = null
 
       unsubscribeFromTicker(tickerToRemove.name)
-      unsubscribeFromTicker(tickerToRemove.name)
-
     },
   },
   watch: {
