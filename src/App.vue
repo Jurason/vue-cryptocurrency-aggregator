@@ -81,7 +81,8 @@
             :key="item"
             v-on:click="select(item)"
             v-bind:class="{
-              'border-4': selectedTicker === item
+              'border-4': selectedTicker === item,
+              'bg-red-100': item.price === '...',
             }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
         >
@@ -244,13 +245,11 @@ export default {
       return this.graph.map(
         price => 5 + (price - minValue) * 95 / (maxValue - minValue))
     },
-    selectedTickerPrice(){
-      return this.selectedTicker.price
-    }
+
   },
   methods: {
     updatePrice(tickerName, price){
-      this.tickers
+			this.tickers
           .filter(ticker => ticker.name === tickerName)
           .forEach(ticker => {
             if(ticker === this.selectedTicker) {
@@ -260,21 +259,20 @@ export default {
           }) // this.tickers.filter(ticker => ticker.name === tickerName).price = price
     },
     formatPrice(price){
-      if(price === '...') {
+			if(price === '...') {
         return '...'
       }
       return price > 1
           ? price.toFixed(2)
           : price.toPrecision(2)
     },
-
     add(){
       const currentTicker = {
         name: this.ticker.toUpperCase(),
         price: '...'
       }
 
-      if(!Object.keys(this.coinList).includes(currentTicker.name)) return false         //upgrade sort
+      // if(!Object.keys(this.coinList).includes(currentTicker.name)) return false         //upgrade sort
       if(this.tickers.find(el => el.name === currentTicker.name)) {
         this.tickerAlreadyAdded = true
         return
@@ -300,11 +298,9 @@ export default {
     select(item){
       if(this.selectedTicker !== item && this.selectedTicker !== null) {
         this.graph = []
-
-      //   this.stack[this.sel.name] ? this.stack[this.sel.name].push(...this.graph) : this.stack[this.sel.name] = this.graph
-      //   console.log(this.graph);
-      //   this.graph = this.stack[item.name] ? this.stack[item.name] : []
-      //   console.log(this.graph);
+      // можно тут добавлять cb на обновление графика по выбранному тикеру
+      // и на транспортном слое он будет запускать вместе с остальными подписанными на этот тикер функциями
+      // но непонятно как отписываться
       }
       this.selectedTicker = item;
     },
