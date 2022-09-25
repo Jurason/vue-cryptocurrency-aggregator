@@ -65,7 +65,7 @@
       <hr class="w-full border-t border-gray-600 my-4" />
       </template>
 
-			<graph-ticker @close-graph="selectedTicker = null" :graph="graph" :selectedTicker="selectedTicker" />
+			<graph-ticker @close-graph="selectedTicker = null" :selectedTicker="selectedTicker"/>
 
     </div>
   </div>
@@ -92,8 +92,6 @@ export default {
       hints: [],
       coinList: [],
 
-      graph: [],
-
       page: 1,
 
       tickerAlreadyAdded: false,
@@ -103,6 +101,7 @@ export default {
     const windowData = Object.fromEntries(
         new URL(window.location).searchParams.entries()
     );
+
     const VALID_KEYS = ['filter', 'page']
     VALID_KEYS.forEach(key => {
       if(windowData[key]){
@@ -122,7 +121,7 @@ export default {
   },
   computed: {
 		tooManyTickersAdded () {
-			return this.tickers.length > 18
+			return this.tickers.length > 3
 		},
     pageStateOptions(){
       return {
@@ -155,9 +154,6 @@ export default {
 			this.tickers
           .filter(ticker => ticker.name === tickerName)
           .forEach(ticker => {
-            if(ticker === this.selectedTicker) {
-              this.graph.push(price)
-            }
             ticker.price = price
           }) // this.tickers.filter(ticker => ticker.name === tickerName).price = price
     },
@@ -189,9 +185,6 @@ export default {
     },
 
     select(item){
-      if(this.selectedTicker !== item && this.selectedTicker !== null) {
-				this.graph = []
-			}
 			this.selectedTicker = item;
 		},
     handleDelete(tickerToRemove) {
@@ -206,10 +199,6 @@ export default {
   watch: {
     tickers(){
       localStorage.setItem('cryptonomicon-list', JSON.stringify(this.tickers))
-    },
-
-    selectedTicker(){
-      this.graph = []
     },
 
     paginatedTickers(){

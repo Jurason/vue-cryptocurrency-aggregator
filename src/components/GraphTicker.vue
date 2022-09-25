@@ -5,7 +5,7 @@
 		<h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
 			{{ selectedTicker.name }} - USD
 		</h3>
-		<div class="flex items-end border-gray-600 border-b border-l h-64">
+		<div class="flex items-end border-gray-600 border-b border-l h-64" ref="graph">
 			<div
 					v-for="(bar, idx) of normalizedGraph"
 					:key="idx"
@@ -45,48 +45,83 @@
 <script>
 export default {
 	name: "GraphTicker",
-	data() {
-		return {
-
+	props: {
+		selectedTicker: {
+			type: Object,
+			required: false,
+			default: null,
+		},
+	},
+	emits: {
+		'close-graph': {
 
 		}
 	},
-
+	data() {
+		return {
+			graphData: [],
+			maxGraphElements: 1,
+			currentTickerName: null
+		}
+	},
+	mounted() {
+		window.addEventListener('resize', this.calculateMaxGraphElements)
+	},
+	beforeUnmount() {
+		window.removeEventListener('resize', this.calculateMaxGraphElements)
+	},
 	computed: {
 		normalizedGraph(){
-			const maxValue = Math.max(...this.graph)
-			const minValue = Math.min(...this.graph)
+			const maxValue = Math.max(...this.graphData)
+			const minValue = Math.min(...this.graphData)
 			if(maxValue === minValue) {
-				return this.graph.map(() => 50)
+				return this.graphData.map(() => 50)
 			}
-			return this.graph.map(
+			return this.graphData.map(
 					price => 5 + (price - minValue) * 95 / (maxValue - minValue))
 		},
-
-
-
+		currentTickerPrice(){
+			if(!this.selectedTicker){
+				return
+			}
+			return this.selectedTicker.price
+		},
 	},
 	methods: {
 		closeGraph(){
+			this.graphData = []
 			this.$emit('close-graph', null)
 		},
-	},
-
-	props: {
-		selectedTicker: {
-
+		calculateMaxGraphElements(){
+			if(!this.$refs.graph){
+				return
+			}
+			this.maxGraphElements = this.$refs.graph.clientWidth / 38
 		},
-		graph: {
-
+		graphResize(){
+			if(this.graphData.length > this.maxGraphElements){
+				this.graphData = this.graphData.slice(this.graphData.length - this.maxGraphElements)
+			}
+		},
+	},
+	watch: {
+		currentTickerPrice(){
+			if(!this.selectedTicker){
+				return
+			}
+			this.graphData.push(this.selectedTicker.price)
+			this.calculateMaxGraphElements()
+			this.graphResize()
+		},
+		selectedTicker(){
+			if(!this.selectedTicker){
+				return
+			}
+			if(this.selectedTicker.name !== this.currentTickerName){
+				this.graphData = []
+			}
 		}
 	},
-
-	emits: {
-
-
-	},
-
-
 }
 </script>
 

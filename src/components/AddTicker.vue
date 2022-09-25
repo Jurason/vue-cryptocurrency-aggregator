@@ -87,6 +87,9 @@ export default {
 
 	methods: {
 		add() {
+			if(!this.ticker){
+				return
+			}
 			if(this.disabled) {
 				return
 			}
