@@ -6,11 +6,41 @@ export default {
 			msg: '',
 			days: 7,
 			weeks: 4,
+
+			currentBox: {},
+			appliedDay: false,
+		}
+	},
+	computed:{
+
+	},
+	methods:{
+		addRow(){
+			this.weeks++
+		},
+		deleteRow(){
+			if(this.weeks <= 0){
+				return
+			}
+			this.weeks--
+		},
+		pickBox(e){
+			this.currentBox['row'] = e.target.attributes.row.value
+			this.currentBox['column'] = e.target.attributes.column.value
+		},
+		applyRow(){
+			const row = document.querySelectorAll(`input[row="${this.currentBox.row}"]`)
+			row.forEach(box => box.classList.add('active'))
+		},
+		applyColumn(){
+			const row = document.querySelectorAll(`input[column="${this.currentBox.column}"]`)
+			row.forEach(box => box.classList.add('active'))
 		}
 	}
 }
 </script>
 <style>
+
 	.wrapper {
 		display: flex;
 		flex-direction: column;
@@ -37,8 +67,13 @@ export default {
 		max-width: 100%;
 		text-align: center;
 	}
-	.week input {
+	.day input {
 		width: 100%;
+		outline: none;
+		background-color: antiquewhite;
+	}
+	.day .active {
+		background-color: brown;
 	}
 	.week-title {
 		display: flex;
@@ -49,7 +84,6 @@ export default {
 		font-size: 10px;
 		border: none;
 	}
-
 	.table-footer {
 		display: flex;
 		justify-content: space-between;
@@ -71,6 +105,7 @@ export default {
 		padding: .125rem .5rem;
 	}
 
+
 </style>
 
 <template>
@@ -87,26 +122,36 @@ export default {
 				<div>Friday</div>
 				<div>Saturday</div>
 			</div>
-			<div v-for="week in weeks" :key="week" class="week">
+			<div v-for="(week, i) in weeks" :key="week" class="week">
 				<div class="week-title">
 					<input type="text" maxlength="5" class="" placeholder="XX.XX">
 					<input type="text" maxlength="5" class="" placeholder="XX.XX">
 				</div>
-				<div v-for="day in days" :key="day" class="day">
-					<input type="text" :id="day">
+				<div v-for="(day, j) in days" :key="day" class="day">
+					<input
+							type="text"
+							:row="i"
+							:column="j"
+							@focus="pickBox"
+					:class="{
+
+					}">
 				</div>
 			</div>
 		</div>
 		<div class="table-footer">
 			<div class="footer-left">
-				<button >+ add row</button>
-				<button >- delete row</button>
+				<button @click="addRow">+ add row</button>
+				<button @click="deleteRow">- delete row</button>
+				<label for="apply-day">
+					<button id="apply-day">apply day</button>&nbsp;
+				</label>
 				<label for="apply-row">
-					<input type="checkbox" id="apply-row">
+					<input @click="applyRow" type="checkbox" id="apply-row">&nbsp;
 					<span>apply row</span>
 				</label>
 				<label for="apply-col">
-					<input type="checkbox" id="apply-col">
+					<input @click="applyColumn" type="checkbox" id="apply-col">&nbsp;
 					<span>apply column</span>
 				</label>
 				<button >x clear all</button>
