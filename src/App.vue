@@ -72,18 +72,17 @@
 <!--</template>-->
 
 <template>
-	<h1 class="">{{ msg }}</h1>
-	<Counter/>
+	<calendar/>
 </template>
 
 <script>
 
-import Counter from './components/Counter'
+import Calendar from './components/Calendar'
 
 export default {
   name: 'App',
 	components: {
-		Counter,
+		Calendar,
 	},
   data() {
     return {
@@ -113,9 +112,6 @@ export default {
 }
 </script>
 <style>
-	#app {
-		text-align: center;
-		margin-top: 10%;
-	}
+
 </style>
 
