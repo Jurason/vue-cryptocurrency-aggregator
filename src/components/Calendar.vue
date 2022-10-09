@@ -1,20 +1,47 @@
 <script>
+
 export default {
 	name: 'CalendarTable',
 	data(){
 		return{
-			msg: '',
-			days: 7,
-			weeks: 4,
+			isCreated: false,
+			initialWeeksCount: null,
 
-			currentBox: {},
-			appliedDay: false,
+			weeks: null,
+			days: 7,
+
+			currentCell: {row: null, column: null, active: false},
+
+			applyDayButton: {
+				name: this.$options.APPLY_DAY_BUTTON_NAME
+			}
 		}
 	},
+
+	CURRENT_SELECTED_CELL_CLASS: 'selected',
+	ACTIVE_CELL_CLASS: 'active',
+	APPLY_DAY_BUTTON_NAME: 'apply day',
+	OPEN_DAY_BUTTON_NAME: 'open day',
+
 	computed:{
+		isActive(){
+			return this.currentCell.active
+		},
+	},
+	watch:{
 
 	},
 	methods:{
+		createCalendar(){
+			if(!this.initialWeeksCount){
+				document.querySelector('input').blur()
+				return
+			}
+			this.weeks = this.initialWeeksCount
+			this.isCreated = true
+			this.initialWeeksCount = null
+			document.querySelectorAll('input').forEach(input => input.blur())
+		},
 		addRow(){
 			this.weeks++
 		},
@@ -25,16 +52,44 @@ export default {
 			this.weeks--
 		},
 		pickBox(e){
-			this.currentBox['row'] = e.target.attributes.row.value
-			this.currentBox['column'] = e.target.attributes.column.value
+			this.currentCell['row'] = e.target.attributes.row.value
+			this.currentCell['column'] = e.target.attributes.column.value
+			this.currentCell['active'] = e.target.classList.contains('active') ? true : false
+
+			const selectedCell = document.querySelector(`.${this.$options.CURRENT_SELECTED_CELL_CLASS}`)
+			if(selectedCell){
+				selectedCell.classList.remove(this.$options.CURRENT_SELECTED_CELL_CLASS)
+			}
+			e.target.classList.add(this.$options.CURRENT_SELECTED_CELL_CLASS)
+		},
+		applyDay() {
+			const selectedCell = document.querySelector(`.${this.$options.CURRENT_SELECTED_CELL_CLASS}`)
+			if(!selectedCell){
+				return
+			}
+			if(selectedCell.classList.contains(this.$options.ACTIVE_CELL_CLASS)){
+				selectedCell.classList.remove(this.$options.ACTIVE_CELL_CLASS)
+				this.currentCell.active = false
+				return
+			}
+			selectedCell.classList.add(this.$options.ACTIVE_CELL_CLASS)
+			this.currentCell.active = true
 		},
 		applyRow(){
-			const row = document.querySelectorAll(`input[row="${this.currentBox.row}"]`)
-			row.forEach(box => box.classList.add('active'))
+			const row = document.querySelectorAll(`input[row="${this.currentCell.row}"]`)
+			row.forEach(box => box.classList.add(this.$options.ACTIVE_CELL_CLASS))
 		},
 		applyColumn(){
-			const row = document.querySelectorAll(`input[column="${this.currentBox.column}"]`)
-			row.forEach(box => box.classList.add('active'))
+			const row = document.querySelectorAll(`input[column="${this.currentCell.column}"]`)
+			row.forEach(box => box.classList.add(this.$options.ACTIVE_CELL_CLASS))
+		},
+		clearAll(){
+			const allCells = document.querySelectorAll('.day > input')
+			allCells.forEach(input => {
+				input.classList.remove(this.$options.CURRENT_SELECTED_CELL_CLASS)
+				input.classList.remove(this.$options.ACTIVE_CELL_CLASS)
+				input.value = ''
+			})
 		}
 	}
 }
@@ -71,6 +126,7 @@ export default {
 		width: 100%;
 		outline: none;
 		background-color: antiquewhite;
+		text-align: center;
 	}
 	.day .active {
 		background-color: brown;
@@ -104,13 +160,75 @@ export default {
 		color: white;
 		padding: .125rem .5rem;
 	}
+	.initial-state {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		height: 100vh;
+	}
+	.created {
+		margin-top: 50px;
+		height: 20vh;
+	}
+	.initial-state-form {
+		display: flex;
+		flex-direction: column;
+		gap: 1em;
+		margin-bottom: 50px;
+		text-align: left;
+	}
 
+	.create-calendar {
+		appearance: none;
+		backface-visibility: hidden;
+		background-color: #27ae60;
+		border-radius: 8px;
+		border-style: none;
+		box-shadow: rgba(39, 174, 96, .15) 0 4px 9px;
+		box-sizing: border-box;
+		color: #fff;
+		cursor: pointer;
+		display: inline-block;
+		font-family: Inter,-apple-system,system-ui,"Segoe UI",Helvetica,Arial,sans-serif;
+		font-size: 16px;
+		font-weight: 600;
+		letter-spacing: normal;
+		line-height: 1.5;
+		outline: none;
+		overflow: hidden;
+		padding: 13px 20px;
+		position: relative;
+		text-align: center;
+		text-decoration: none;
+		transform: translate3d(0, 0, 0);
+		transition: all .3s;
+		user-select: none;
+		-webkit-user-select: none;
+		touch-action: manipulation;
+		vertical-align: top;
+		white-space: nowrap;
+ }
 
+	.create-calendar:hover {
+		background-color: #1e8449;
+		opacity: 1;
+		transform: translateY(0);
+		transition-duration: .35s;
+	}
+
+	.create-calendar:active {
+		transform: translateY(2px);
+		transition-duration: .35s;
+	}
+
+	.create-calendar:hover {
+		box-shadow: rgba(39, 174, 96, .2) 0 6px 12px;
+	}
 </style>
 
 <template>
 	<div class="wrapper">
-	<div class="wrapper-table">
+	<div v-if="isCreated" class="wrapper-table">
 		<div class="main">
 			<div class="week">
 				<div>/</div>
@@ -132,10 +250,7 @@ export default {
 							type="text"
 							:row="i"
 							:column="j"
-							@focus="pickBox"
-					:class="{
-
-					}">
+							@focus="pickBox">
 				</div>
 			</div>
 		</div>
@@ -144,7 +259,7 @@ export default {
 				<button @click="addRow">+ add row</button>
 				<button @click="deleteRow">- delete row</button>
 				<label for="apply-day">
-					<button id="apply-day">apply day</button>&nbsp;
+					<button @click="applyDay" id="apply-day">{{ applyDayButton.name = isActive ? $options.OPEN_DAY_BUTTON_NAME : $options.APPLY_DAY_BUTTON_NAME }}</button>&nbsp;
 				</label>
 				<label for="apply-row">
 					<input @click="applyRow" type="checkbox" id="apply-row">&nbsp;
@@ -154,15 +269,23 @@ export default {
 					<input @click="applyColumn" type="checkbox" id="apply-col">&nbsp;
 					<span>apply column</span>
 				</label>
-				<button >x clear all</button>
+				<button @click="clearAll">x clear all</button>
 			</div>
 			<button class="download">download PDF</button>
 		</div>
 	</div>
-	<footer class="">
-		Made with <span>Vue.js</span> by <a href="https://github.com/Jurason">Evgeniy</a>.
-		Open Source on <a href="https://github.com/Jurason">GitHub</a>.
-	</footer>
+	<div class="initial-state"
+			:class="{
+			'created': isCreated
+			}">
+		<div class="initial-state-form" >
+			<input type="number" v-model="initialWeeksCount" @keydown.enter="createCalendar" placeholder="Enter number of weeks"> <button @click="createCalendar" class="create-calendar">Create Calendar</button>
+		</div>
+		<footer>
+			Made with <span>Vue.js</span> by <a href="https://github.com/Jurason">Evgeniy</a>.
+			Open Source on <a href="https://github.com/Jurason">GitHub</a>.
+		</footer>
+	</div>
 	</div>
 </template>
 
