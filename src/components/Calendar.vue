@@ -11,7 +11,6 @@ export default {
 			days: 7,
 
 			currentCell: {row: null, column: null, active: false},
-
 			applyDayButton: {
 				name: this.$options.APPLY_DAY_BUTTON_NAME
 			}
@@ -23,15 +22,38 @@ export default {
 	APPLY_DAY_BUTTON_NAME: 'apply day',
 	OPEN_DAY_BUTTON_NAME: 'open day',
 
+	mounted() {
+		document.addEventListener('keydown', this.handleKeyDown)
+	},
+	beforeUnmount() {
+		document.removeEventListener('keydown', this.handleKeyDown)
+	},
 	computed:{
 		isActive(){
 			return this.currentCell.active
 		},
-	},
-	watch:{
-
+		isSelected(){
+			return Object.values(this.currentCell).some(value => value)
+		}
 	},
 	methods:{
+		handleKeyDown(e){
+			if(e.key === 'Escape' || e.key === 'Enter'){
+				document.querySelectorAll('input').forEach(input => input.blur())
+				Object.keys(this.currentCell).forEach(key => {
+					if(key !== 'active'){
+						this.currentCell[key] = null
+						return
+					}
+					this.currentCell[key] = false
+				})
+				this.clearSelection()
+			}
+		},
+		test(){
+			console.log('Test!')
+			console.log(this.isSelected);
+		},
 		createCalendar(){
 			if(!this.initialWeeksCount){
 				document.querySelector('input').blur()
@@ -51,16 +73,20 @@ export default {
 			}
 			this.weeks--
 		},
-		pickBox(e){
+		selectCell(e){
 			this.currentCell['row'] = e.target.attributes.row.value
 			this.currentCell['column'] = e.target.attributes.column.value
 			this.currentCell['active'] = e.target.classList.contains('active') ? true : false
 
+			this.clearSelection()
+
+			e.target.classList.add(this.$options.CURRENT_SELECTED_CELL_CLASS)
+		},
+		clearSelection(){
 			const selectedCell = document.querySelector(`.${this.$options.CURRENT_SELECTED_CELL_CLASS}`)
 			if(selectedCell){
 				selectedCell.classList.remove(this.$options.CURRENT_SELECTED_CELL_CLASS)
 			}
-			e.target.classList.add(this.$options.CURRENT_SELECTED_CELL_CLASS)
 		},
 		applyDay() {
 			const selectedCell = document.querySelector(`.${this.$options.CURRENT_SELECTED_CELL_CLASS}`)
@@ -97,6 +123,7 @@ export default {
 <style>
 
 	.wrapper {
+		z-index: 2;
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
@@ -105,7 +132,9 @@ export default {
 		padding-top: 50px;
 		padding-bottom: 50px;
 	}
-
+	.selected {
+		border-style: dashed;
+	}
 	.wrapper-table {
 		width: calc(100vw - 200px);
 	}
@@ -177,7 +206,12 @@ export default {
 		margin-bottom: 50px;
 		text-align: left;
 	}
-
+	button:disabled {
+		color: red;
+	}
+	input[type=checkbox][disabled] {
+		color: red;
+	}
 	.create-calendar {
 		appearance: none;
 		backface-visibility: hidden;
@@ -224,9 +258,18 @@ export default {
 	.create-calendar:hover {
 		box-shadow: rgba(39, 174, 96, .2) 0 6px 12px;
 	}
+	.blur {
+		position: absolute;
+		width: 100vw;
+		height: 100vh;
+		opacity: .4;
+		background: brown;
+		z-index: -1;
+	}
 </style>
 
 <template>
+	<div class="blur"></div>
 	<div class="wrapper">
 	<div v-if="isCreated" class="wrapper-table">
 		<div class="main">
@@ -250,7 +293,7 @@ export default {
 							type="text"
 							:row="i"
 							:column="j"
-							@focus="pickBox">
+							@focus="selectCell">
 				</div>
 			</div>
 		</div>
@@ -259,17 +302,18 @@ export default {
 				<button @click="addRow">+ add row</button>
 				<button @click="deleteRow">- delete row</button>
 				<label for="apply-day">
-					<button @click="applyDay" id="apply-day">{{ applyDayButton.name = isActive ? $options.OPEN_DAY_BUTTON_NAME : $options.APPLY_DAY_BUTTON_NAME }}</button>&nbsp;
+					<button :disabled="!isSelected" @click="applyDay" id="apply-day">{{ applyDayButton.name = isActive ? $options.OPEN_DAY_BUTTON_NAME : $options.APPLY_DAY_BUTTON_NAME }}</button>&nbsp;
 				</label>
 				<label for="apply-row">
-					<input @click="applyRow" type="checkbox" id="apply-row">&nbsp;
+					<input :disabled="!isSelected" @click="applyRow" type="checkbox" id="apply-row">&nbsp;
 					<span>apply row</span>
 				</label>
 				<label for="apply-col">
-					<input @click="applyColumn" type="checkbox" id="apply-col">&nbsp;
+					<input :disabled="!isSelected" @click="applyColumn" type="checkbox" id="apply-col">&nbsp;
 					<span>apply column</span>
 				</label>
 				<button @click="clearAll">x clear all</button>
+				<button @click="test">test</button>
 			</div>
 			<button class="download">download PDF</button>
 		</div>
