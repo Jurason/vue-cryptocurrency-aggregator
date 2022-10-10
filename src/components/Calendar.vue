@@ -10,10 +10,10 @@ export default {
 			weeks: null,
 			days: 7,
 
-			currentCell: {row: null, column: null, active: false},
+			currentCell: {row: null, column: null, active: false, activeRow: false, activeColumn: false},
 			applyDayButton: {
 				name: this.$options.APPLY_DAY_BUTTON_NAME
-			}
+			},
 		}
 	},
 
@@ -34,7 +34,14 @@ export default {
 		},
 		isSelected(){
 			return Object.values(this.currentCell).some(value => value)
+		},
+		isActiveRow(){
+			return this.currentCell.activeRow
+		},
+		isActiveColumn(){
+			return this.currentCell.activeColumn
 		}
+
 	},
 	methods:{
 		handleKeyDown(e){
@@ -51,8 +58,7 @@ export default {
 			}
 		},
 		test(){
-			console.log('Test!')
-			console.log(this.isSelected);
+			console.log('this.currentCell:', this.currentCell)
 		},
 		createCalendar(){
 			if(!this.initialWeeksCount){
@@ -77,6 +83,8 @@ export default {
 			this.currentCell['row'] = e.target.attributes.row.value
 			this.currentCell['column'] = e.target.attributes.column.value
 			this.currentCell['active'] = e.target.classList.contains('active') ? true : false
+			this.updateActiveColumnData()
+			this.updateActiveRowData()
 
 			this.clearSelection()
 
@@ -104,10 +112,14 @@ export default {
 		applyRow(){
 			const row = document.querySelectorAll(`input[row="${this.currentCell.row}"]`)
 			row.forEach(box => box.classList.add(this.$options.ACTIVE_CELL_CLASS))
+			this.updateActiveColumnData()
+			this.updateActiveRowData()
 		},
 		applyColumn(){
 			const row = document.querySelectorAll(`input[column="${this.currentCell.column}"]`)
 			row.forEach(box => box.classList.add(this.$options.ACTIVE_CELL_CLASS))
+			this.updateActiveColumnData()
+			this.updateActiveRowData()
 		},
 		clearAll(){
 			const allCells = document.querySelectorAll('.day > input')
@@ -116,7 +128,22 @@ export default {
 				input.classList.remove(this.$options.ACTIVE_CELL_CLASS)
 				input.value = ''
 			})
-		}
+		},
+		updateActiveRowData(){
+			if(!this.isSelected){
+				return false
+			}
+			const currentRow = document.querySelectorAll(`input[row="${this.currentCell.row}"]`)
+			this.currentCell.activeRow = !Array.from(currentRow).filter(input => !input.classList.contains(this.$options.ACTIVE_CELL_CLASS)).length
+		},
+		updateActiveColumnData(){
+			if(!this.isSelected){
+				return false
+			}
+			const currentColumn = document.querySelectorAll(`input[column="${this.currentCell.column}"]`)
+			this.currentCell.activeColumn = !Array.from(currentColumn).filter(input => !input.classList.contains(this.$options.ACTIVE_CELL_CLASS)).length
+		},
+
 	}
 }
 </script>
@@ -305,11 +332,11 @@ export default {
 					<button :disabled="!isSelected" @click="applyDay" id="apply-day">{{ applyDayButton.name = isActive ? $options.OPEN_DAY_BUTTON_NAME : $options.APPLY_DAY_BUTTON_NAME }}</button>&nbsp;
 				</label>
 				<label for="apply-row">
-					<input :disabled="!isSelected" @click="applyRow" type="checkbox" id="apply-row">&nbsp;
+					<input :disabled="!isSelected" :checked="isActiveRow" @click="applyRow" type="checkbox" id="apply-row">&nbsp;
 					<span>apply row</span>
 				</label>
 				<label for="apply-col">
-					<input :disabled="!isSelected" @click="applyColumn" type="checkbox" id="apply-col">&nbsp;
+					<input :disabled="!isSelected" :checked="isActiveColumn" @click="applyColumn" type="checkbox" id="apply-col">&nbsp;
 					<span>apply column</span>
 				</label>
 				<button @click="clearAll">x clear all</button>
