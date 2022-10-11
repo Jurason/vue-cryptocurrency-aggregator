@@ -1,37 +1,44 @@
 <template>
-	<calendar/>
+		<calendar-via-object/>
 </template>
 
 <script>
 
-import Calendar from './components/Calendar'
+import CalendarViaObject from './components/CalendarViaObject'
 
 export default {
   name: 'App',
 	components: {
-		Calendar,
+		CalendarViaObject
 	},
   data() {
     return {
-			msg: 'Hello World!'
+			msg: 'Hello World!',
+			isInitialModalOpen: true,
+			isCalendarCreated: false,
+			weekCount: 0,
+
     }
   },
   created() {
 
   },
-	mounted() {
-
-	},
 
 	beforeUnmount() {
 
 	},
-
 	computed: {
 
   },
   methods: {
+		createCalendar(count){
+			console.log('Created event!')
+			console.log('count:', count)
 
+			this.isInitialModalOpen = false
+			this.weekCount = count
+			this.isCreated = true
+		}
   },
   watch: {
 
@@ -39,6 +46,11 @@ export default {
 }
 </script>
 <style>
-
+	.main {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		max-height: 100vh;
+	}
 </style>
 
