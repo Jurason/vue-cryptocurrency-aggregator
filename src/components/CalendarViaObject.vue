@@ -4,6 +4,7 @@ export default {
 	data(){
 		return {
 			table: [],
+			currentSelectedCellCoords: {row: -1, column: -1},
 			weekCount: 0,
 			isCreated: false,
 			applyDayButton: {
@@ -15,6 +16,12 @@ export default {
 	APPLY_DAY_BUTTON_NAME: 'apply day',
 	OPEN_DAY_BUTTON_NAME: 'open day',
 
+	APPLY_ROW_BUTTON_NAME: 'apply row',
+	OPEN_ROW_BUTTON_NAME: 'open row',
+
+	APPLY_COLUMN_BUTTON_NAME: 'apply column',
+	OPEN_COLUMN_BUTTON_NAME: 'open column',
+
 	mounted(){
 
 	},
@@ -22,7 +29,27 @@ export default {
 
 	},
 	computed: {
-
+		isSelected(){
+			return !Object.values(this.currentSelectedCellCoords).every(value => value === -1)
+		},
+		selectedCellIsActive(){
+			if(!this.isSelected){
+				return false
+			}
+			return this.table[this.currentSelectedCellCoords.row].days[this.currentSelectedCellCoords.column].active
+		},
+		selectedRowIsActive(){
+			if(!this.isSelected){
+				return false
+			}
+			return this.table[this.currentSelectedCellCoords.row].days.every(day => day.active)
+		},
+		selectedColumnIsActive(){
+			if(!this.isSelected){
+				return false
+			}
+			return this.table.every(week => week.days[this.currentSelectedCellCoords.column].active)
+		},
 	},
 	methods: {
 		createTable(n){
@@ -37,23 +64,137 @@ export default {
 				for (let j = 0; j < table[i].days.length; j++) {
 					table[i].days[j] = {
 						value: '',
-						active: false
+						active: false,
+						selected: false
 					}
 				}
 			}
 			this.table = table
 			this.isCreated = true
 		},
-		test(){
+		addRow(){
+			const row = {
+				days: new Array(7),
+				start: 'xx.xx',
+				finish: 'xx.xx',
+				active: false
+			}
+			for (let i = 0; i < row.days.length; i++) {
+				row.days[i] = {
+					value: '',
+					active: false,
+					selected: false
+				}
+			}
+			this.table.push(row)
+		},
+		deleteRow(){
+			this.table.pop()
+		},
+		testConsole(){
 			console.log('this.table:', this.table)
 		},
+		selectCell(e){
+			const id = e.target.id.split(':')
+			this.currentSelectedCellCoords.row = id[0]
+			this.currentSelectedCellCoords.column = id[1]
+			this.table[this.currentSelectedCellCoords.row].days[this.currentSelectedCellCoords.column].selected = true
+		},
 		applyDay(){
-
+			const currentCell = this.table[this.currentSelectedCellCoords.row].days[this.currentSelectedCellCoords.column]
+			currentCell.active = !currentCell.active
+			this.cancelSelection()
+		},
+		applyRow(){
+			if(this.table[this.currentSelectedCellCoords.row].days.every(day => day.active)){
+				this.table[this.currentSelectedCellCoords.row].days.forEach(day => day.active = false)
+				this.cancelSelection()
+				return
+			}
+			this.table[this.currentSelectedCellCoords.row].days.forEach(day => day.active = true)
+			this.cancelSelection()
+		},
+		applyColumn(){
+			if(this.table.every(week => week.days[this.currentSelectedCellCoords.column].active)){
+				this.table.forEach(week => week.days[this.currentSelectedCellCoords.column].active = false)
+				this.cancelSelection()
+				return
+			}
+			this.table.forEach(week => week.days[this.currentSelectedCellCoords.column].active = true)
+			this.cancelSelection()
+		},
+		clearAll(){
+			this.createTable(this.table.length)
+		},
+		cancelSelection(){
+			this.table.forEach(week => week.days.forEach(day => day.selected = false))
+			Object.keys(this.currentSelectedCellCoords).forEach(key => this.currentSelectedCellCoords[key] = -1)
 		}
 	},
-
 }
 </script>
+
+<template>
+<div class="blur"></div>
+	<div class="wrapper">
+	<div v-if="isCreated" class="wrapper-table">
+		<div class="main">
+			<div class="week">
+				<div>/</div>
+				<div>Sunday</div>
+				<div>Monday</div>
+				<div>Tuesday</div>
+				<div>Wednesday</div>
+				<div>Thursday</div>
+				<div>Friday</div>
+				<div>Saturday</div>
+			</div>
+			<div v-for="(week, i) in table" :key="week" class="week">
+				<div class="week-title">
+					<input type="text" maxlength="5" v-model="week.start">
+					<input type="text" maxlength="5" v-model="week.finish">
+				</div>
+				<div v-for="(day, j) in week.days" :key="day" class="day" :class="{'active': day.active}">
+					<input
+							type="text"
+							:id="`${i}:${j}`"
+							v-model="day.value"
+							@focus="selectCell"
+					>
+				</div>
+			</div>
+		</div>
+		<div class="table-footer">
+			<div class="footer-left">
+				<button @click="addRow">+ add row</button>
+				<button :disabled="!table.length" @click="deleteRow">- delete row</button>
+				<label for="apply-day">
+					<button :disabled="!isSelected" @click="applyDay" id="apply-day">{{selectedCellIsActive ? $options.OPEN_DAY_BUTTON_NAME : $options.APPLY_DAY_BUTTON_NAME}}</button>&nbsp;
+				</label>
+				<label for="apply-row">
+					<button :disabled="!isSelected" @click="applyRow" id="apply-row">{{selectedRowIsActive ? $options.OPEN_ROW_BUTTON_NAME : $options.APPLY_ROW_BUTTON_NAME}}</button>&nbsp;
+				</label>
+				<label for="apply-col">
+					<button :disabled="!isSelected" @click="applyColumn" id="apply-column">{{selectedColumnIsActive ? $options.OPEN_COLUMN_BUTTON_NAME : $options.APPLY_COLUMN_BUTTON_NAME}}</button>&nbsp;
+				</label>
+				<button @click="clearAll">x clear all</button>
+				<button @click="testConsole">test</button>
+			</div>
+			<button class="download">download PDF</button>
+		</div>
+	</div>
+	<div class="initial-state" :class="{'created': isCreated}">
+		<div class="initial-state-form" >
+			<input type="number" placeholder="Enter number of weeks" v-model="weekCount"> <button @click="createTable(weekCount)" class="create-calendar">Create Calendar</button>
+		</div>
+		<footer>
+			Made with <span>Vue.js</span> by <a href="https://github.com/Jurason">Evgeniy</a>.
+			Open Source on <a href="https://github.com/Jurason">GitHub</a>.
+		</footer>
+	</div>
+	</div>
+
+</template>
 
 <style>
 
@@ -92,7 +233,7 @@ export default {
 	background-color: antiquewhite;
 	text-align: center;
 }
-.day .active {
+.active {
 	background-color: brown;
 }
 .week-title {
@@ -202,66 +343,3 @@ input[type=checkbox][disabled] {
 	z-index: -1;
 }
 </style>
-
-<template>
-<div class="blur"></div>
-	<div class="wrapper">
-	<div v-if="isCreated" class="wrapper-table">
-		<div class="main">
-			<div class="week">
-				<div>/</div>
-				<div>Sunday</div>
-				<div>Monday</div>
-				<div>Tuesday</div>
-				<div>Wednesday</div>
-				<div>Thursday</div>
-				<div>Friday</div>
-				<div>Saturday</div>
-			</div>
-			<div v-for="(week, i) in table" :key="week" class="week">
-				<div class="week-title">
-					<input type="text" maxlength="5" v-model="week.start">
-					<input type="text" maxlength="5" v-model="week.finish">
-				</div>
-				<div v-for="(day, j) in week.days" :key="day" class="day">
-					<input
-							type="text"
-							:id="`${i}:${j}`"
-							v-model="day.value"
-					>
-				</div>
-			</div>
-		</div>
-		<div class="table-footer">
-			<div class="footer-left">
-<!--				<button @click="addRow">+ add row</button>-->
-<!--				<button @click="deleteRow">- delete row</button>-->
-				<label for="apply-day">
-					<button @click="applyDay" id="apply-day">{{ applyDayButton.name = isActive ? $options.OPEN_DAY_BUTTON_NAME : $options.APPLY_DAY_BUTTON_NAME }}</button>&nbsp;
-				</label>
-<!--				<label for="apply-row">-->
-<!--					<input :disabled="!isSelected" :checked="isActiveRow" @click="applyRow" type="checkbox" id="apply-row">&nbsp;-->
-<!--					<span>apply row</span>-->
-<!--				</label>-->
-<!--				<label for="apply-col">-->
-<!--					<input :disabled="!isSelected" :checked="isActiveColumn" @click="applyColumn" type="checkbox" id="apply-col">&nbsp;-->
-<!--					<span>apply column</span>-->
-<!--				</label>-->
-<!--				<button @click="clearAll">x clear all</button>-->
-				<button @click="test">test</button>
-			</div>
-			<button class="download">download PDF</button>
-		</div>
-	</div>
-	<div class="initial-state" :class="{'created': isCreated}">
-		<div class="initial-state-form" >
-			<input type="number" placeholder="Enter number of weeks" v-model="weekCount"> <button @click="createTable(weekCount)" class="create-calendar">Create Calendar</button>
-		</div>
-		<footer>
-			Made with <span>Vue.js</span> by <a href="https://github.com/Jurason">Evgeniy</a>.
-			Open Source on <a href="https://github.com/Jurason">GitHub</a>.
-		</footer>
-	</div>
-	</div>
-
-</template>
