@@ -1,4 +1,4 @@
-import { subscribeToTickerOnWs, unsubscribeFromTickerOnWs} from "./worker";
+import { tickersHandlers } from "./worker";
 
 const worker = new SharedWorker('src/worker')
 
@@ -6,12 +6,13 @@ const broadcastChannel = new BroadcastChannel("WebSocketChannel");
 
 worker.port.start()
 
-const tickersHandlers = new Map()
-
 const AGGREGATE_INDEX = '5'
 
-broadcastChannel.addEventListener("message", e => {
-    let { TYPE: type, FROMSYMBOL: currency, PRICE: newPrice } = e.data.data
+//не решена проблема частичных отписок от тикеров. Вкладки зависимы при удалении тикеров
+
+broadcastChannel.addEventListener("message", ({ data }) => {
+    if(data.type === 'WSState' || data.action === 'subscribe') return
+    let { TYPE: type, FROMSYMBOL: currency, PRICE: newPrice } = data.data
     if(type !== AGGREGATE_INDEX || newPrice === undefined){
         return;
     }
@@ -22,10 +23,20 @@ broadcastChannel.addEventListener("message", e => {
 export const subscribeToTicker = (ticker, cb) => {              // subscribe on current ticker
     const subscribers = tickersHandlers.get(ticker) || []
     tickersHandlers.set(ticker, [...subscribers, cb])
-    subscribeToTickerOnWs(ticker)
+    broadcastChannel.postMessage({
+        action: 'subscribe',
+        ticker: ticker
+    })
+    console.log(`subscribe on ${ticker}`);
+    // subscribeToTickerOnWs(ticker)
 }
 export const unsubscribeFromTicker = ticker => {            // unsubscribe
     tickersHandlers.delete(ticker)
-    unsubscribeFromTickerOnWs(ticker)
+    broadcastChannel.postMessage({
+        action: 'unsubscribe',
+        ticker: ticker
+    })
+    console.log(`unsubscribe from ${ticker}`);
+    // unsubscribeFromTickerOnWs(ticker)
 }
 

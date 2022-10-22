@@ -8,22 +8,41 @@ const broadcastChannel = new BroadcastChannel('WebSocketChannel')
 socket.onopen = () => broadcastChannel.postMessage({ type: "WSState", state: socket.readyState });
 socket.onclose = () => broadcastChannel.postMessage({ type: "WSState", state: socket.readyState });
 
+export const tickersHandlers = new Map()
+
 socket.addEventListener('message', e => {
     const parseData = {data: JSON.parse(e.data), type: 'message'}
     broadcastChannel.postMessage(parseData);
 })
 
-// Не решена проблема подписок из разных вкладок
+broadcastChannel.addEventListener('message', ({ data }) => {
+    if(data.action === 'subscribe'){
+        console.log('Send subscribe msg to websocket')
+        subscribeToTickerOnWs(data.ticker)
 
-// addEventListener('connect', e => {
+        console.log('tickersHandlers:', tickersHandlers)
+
+    }
+    if(data.action === 'unsubscribe'){
+        console.log('Send UNsubscribe msg to websocket')
+        unsubscribeFromTickerOnWs(data.ticker)
+    }
+})
+
+// self.addEventListener('connect', e => {
 //     // Get the MessagePort from the event. This will be the
 //     // communication channel between SharedWorker and the Tab
 //     console.log('e.ports[0]:', e.ports[0])
 //
 //     const port = e.ports[0];
 //     port.onmessage = msg => {
-//         // Forward this message to the ws connection.
-//         socket.send(JSON.stringify({ data:  msg.data }));
+//         if(msg.action === 'subscribe'){
+//             subscribeToTickerOnWs(msg.ticker)
+//         }
+//         if(msg.action === 'unsubscribe'){
+//             unsubscribeFromTickerOnWs(msg.ticker)
+//         }
+//         // socket.send(JSON.stringify({ data:  msg.data }));
 //     };
 //     // We need this to notify the newly connected context to know
 //     // the current state of WS connection.
@@ -52,3 +71,5 @@ export function unsubscribeFromTickerOnWs(ticker, currency = 'USD'){
         "subs": [`5~CCCAGG~${ticker}~${currency}`]
     })
 }
+
+
